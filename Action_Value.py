@@ -203,8 +203,8 @@ def Data_Reader(action,X=3,Z=1):
     d2=str(np.round(([np.cos(np.pi/6),0,np.cos(np.pi/3)]),5))
     d3=str(np.round(([-np.cos(np.pi/6),0,np.cos(np.pi/3)]),5))
     d4=str(np.round(([0,-np.cos(np.pi/6),np.cos(np.pi/3)]),5))
-    d34=str(np.round([-np.cos(np.pi/6)*np.cos(np.pi/4),-np.cos(np.pi/6)*np.cos(np.pi/4),np.cos(np.pi/3)],5))
     d24=str(np.round([np.cos(np.pi/6)*np.cos(np.pi/4),-np.cos(np.pi/6)*np.cos(np.pi/4),np.cos(np.pi/3)],5))
+    d34=str(np.round([-np.cos(np.pi/6)*np.cos(np.pi/4),-np.cos(np.pi/6)*np.cos(np.pi/4),np.cos(np.pi/3)],5))
     Folder_Name={d1:'uvwT(1)',d2:'uvwT(2)',d3:'uvwT(3)',d4:'uvwT(4)',d24:'uvwT(24)',d34:'uvwT(34)'}
     Direction=str(np.round(action[:3],5))
     Duration=str(int((action[3]*10+1800)))
