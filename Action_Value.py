@@ -41,8 +41,8 @@ def Create_Batch_Experience(X=2,Z=4):
         count=i
         while count<=420:
             for j in Directions:
-                PC=Data_Reader(np.concatenate((j,[count-i])))
-                Exp_Batch.append(Create_Single_Experience(np.concatenate((j,[i])),np.concatenate((j,[PC]))))
+                PC=Data_Reader(np.concatenate((j,[count-i])),X,Z)
+                Exp_Batch.append(Create_Single_Experience(np.concatenate((j,[i])),np.concatenate((j,[PC])),X,Z))
             count+=i
     
     return Exp_Batch
@@ -208,7 +208,7 @@ def Data_Reader(action,X=3,Z=1):
     Folder_Name={d1:'uvwT(1)',d2:'uvwT(2)',d3:'uvwT(3)',d4:'uvwT(4)',d24:'uvwT(24)',d34:'uvwT(34)'}
     Direction=str(np.round(action[:3],5))
     Duration=str(int((action[3]*10+1800)))
-    path= "C:/Users/MiladAbedi/Anaconda3/Lib/site-packages/HVAC/Contiuous/Data/"+Folder_Name[Direction]+"/"+Duration
+    path= "C:/Users/MiladAbedi/Anaconda3/Lib/site-packages/HVAC/Continuous/Data/"+Folder_Name[Direction]+"/"+Duration
     file=open(path,newline='')
     reader=csv.reader(file)
     header=next(reader)
@@ -259,6 +259,6 @@ def Temperature_to_Proportion_Comfortable(Temperature):
 
 
 def Reward_Function(Prop_Comfort,Duration,max_duration=420):
-    return -Duration/max_duration+Prop_Comfort
+    return -Duration/max_duration*0+Prop_Comfort
 
 
