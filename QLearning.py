@@ -1,6 +1,8 @@
 import numpy as np
 import sklearn
 import imp
+from pandas import DataFrame
+import pandas as pd
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -8,11 +10,17 @@ from sklearn.linear_model import LinearRegression             as LR
 from sklearn.neural_network import MLPRegressor               as NNR
 from sklearn.tree import DecisionTreeRegressor                as DTR
 from sklearn.gaussian_process import GaussianProcessRegressor as GPR
-import time
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import AdaBoostRegressor
+import copy
 from scipy import optimize,stats
 #####################################################################################################
 ############################## Function Definition Part #############################################
-
+def running_mean(x, N):
+    cumsum = np.cumsum(np.insert(x, 0, 0)) 
+    return (cumsum[N:] - cumsum[:-N]) / float(N)
 def Direction_Isolater(Experiences):
     Result=dict()
 #    Directions=np.unique([Exp[i][0][0:3] for i in range(len(Exp))],axis=0)
@@ -65,14 +73,16 @@ def Feature_Extractor(Experiences):
     Y=Y.ravel()
     return X,Y
 
-def Regression_Method_Evaluator(Dir_Include,Dir_Evaluate,Method,Exp_File_Name,plot=False,Duration_Limit=[],Return_Model=False):
+def Q_Function(Training_List,Method,Exp_File_Name,Updated_Training_Labels=[],plot=False,Duration_Limit=[],Return_Model=False):
     'Load Experience'
+    
     Experiences=np.load(Exp_File_Name).tolist()
-    global initial_comfort,Testing_Error_Array,Training_Error_Array
+    global initial_comfort,Prediction_Test,Testing_Labels,Testing_Data,Training_Data,Prediction_Train, Training_Labels,Testing_List,Mean_Testing_Abs_Error
     initial_comfort=Experiences[0][0][3]
     if np.any(Duration_Limit):
         Experiences=Duration_Limiter(Experiences,Duration_Limit)
     
+    Dir_Include=[0,1,2,3,4,5]
     
     
     
@@ -81,12 +91,22 @@ def Regression_Method_Evaluator(Dir_Include,Dir_Evaluate,Method,Exp_File_Name,pl
     
     
     
+    All_Exp=Build_Experience_By_Direction(Experiences,Dir_Include,Random=False)
+#    Testing_Exp=Build_Experience_By_Direction(Experiences,Dir_Evaluate,Random=True)
+    All_Data,All_Labels=Feature_Extractor(All_Exp)
+    Testing_List=np.delete(np.arange(0,np.shape(All_Data)[0]),Training_List)
     
-    
-    Training_Exp=Build_Experience_By_Direction(Experiences,Dir_Include,Random=True)
-    Testing_Exp=Build_Experience_By_Direction(Experiences,Dir_Evaluate,Random=True)
-    Training_Data,Training_Labels=Feature_Extractor(Training_Exp)
-    Testing_Data,Testing_Labels=Feature_Extractor(Testing_Exp)
+
+#    Testing_Data,Testing_Labels=Feature_Extractor(Testing_Exp)
+    Training_Data=All_Data[Training_List,:]
+    Testing_Data=All_Data[Testing_List,:]
+    Testing_Labels=All_Labels[Testing_List]
+    if np.any(Updated_Training_Labels):
+        Training_Labels=Updated_Training_Labels
+    else:
+        Training_Labels=All_Labels[Training_List]
+
+
     
     Model=Method
     Model.fit(Training_Data,Training_Labels)
@@ -97,9 +117,9 @@ def Regression_Method_Evaluator(Dir_Include,Dir_Evaluate,Method,Exp_File_Name,pl
     Training_Error_Array=np.array((Prediction_Train-Training_Labels))
     Mean_Testing_Abs_Error=np.mean(np.abs(Testing_Error_Array))
     Mean_Training_Abs_Error=np.mean(np.abs(Training_Error_Array))
-    print('--------------------------------------------------')
-    print('Mean absolute test_data error:',Mean_Testing_Abs_Error)
-    print('--------------------------------------------------')
+#    print('--------------------------------------------------')
+#    print('Mean absolute test_data error:',Mean_Testing_Abs_Error)
+#    print('--------------------------------------------------')
     
     if plot==True:
         plt.hist(Testing_Error_Array,300)
@@ -156,25 +176,31 @@ def Target_Function(Input,Model):
     return Model.predict(Synth_Features)
 
 def Plot_Direction_Reward(Model,Coord_x,Coord_z):
-    a=np.linspace(0,2*np.pi,1000)
+    n=360
+    a=np.linspace(0,2*np.pi,n)
     X=np.sqrt(0.75)*np.cos(a)
     Y=np.sqrt(0.75)*np.sin(a)
-    for i in np.arange(10,430,10):
-        Synth_Features=np.array([X,Y,0.5*np.ones(1000),initial_comfort*np.ones(1000),X,Y,0.5*np.ones(1000),i*np.ones(1000)]).T
-        x=X
-        y=Y
+
+    for i in np.arange(60,70,10):
+        Synth_Features=np.array([X,Y,0.5*np.ones(n),initial_comfort*np.ones(n),X,Y,0.5*np.ones(n),i*np.ones(n)]).T
+        x=-Y*50+150
+        y=-X*50+300
         z = Model.predict(Synth_Features)
+   
+        
     
         cmap = plt.get_cmap('jet', 20)
         cmap.set_under('gray')
         
         fig, ax = plt.subplots()
+        fig.dpi=150
         ax.set_aspect('equal')
-        cax = ax.scatter(x, y, c=z, s=100, cmap=cmap, vmin=z.min(), vmax=z.max())
-        ax.scatter(Coord_x-2,-5.4+Coord_z,c='r')
+        cax = ax.scatter(x, y, c=z, s=3, cmap=cmap, vmin=z.min(), vmax=z.max())
+        ax.scatter(-Coord_z*100+683,Coord_x*100+102,c='r',s=5)
         plt.title(i)
         fig.colorbar(cax, extend='min')
-    
+        im=plt.imread('Room.png')
+        plt.imshow(im)    
         plt.show()
 def py_ang(v1, v2):
     """ Returns the angle in radians between vectors 'v1' and 'v2'    """
@@ -187,7 +213,7 @@ def py_ang(v1, v2):
     return result
 
 def RelativeAngle_DurationRequired(Coord_x,Coord_z,Model,Min_Comfort_Level=0.95,Plot=False):
-    
+    global User_Direction
     Relative_x=Coord_x-2
     Relative_z=Coord_z-5.4
     Directions=np.linspace(0,359,360)/360*np.pi*2
@@ -198,7 +224,7 @@ def RelativeAngle_DurationRequired(Coord_x,Coord_z,Model,Min_Comfort_Level=0.95,
                 Durations[i[0]]=j
                 break
             
-    User_Direction=np.round(py_ang(np.array([1,0]),np.array([Relative_x,Relative_z]))/np.pi*180)
+    User_Direction=np.round(py_ang(np.array([1,0]),np.array([-Relative_x,Relative_z]))/np.pi*180)
     Directions=np.linspace(0,359,360)-User_Direction
     for i in enumerate(Directions):
         if i[1]>180:
@@ -209,31 +235,41 @@ def RelativeAngle_DurationRequired(Coord_x,Coord_z,Model,Min_Comfort_Level=0.95,
     Result=Result[np.argsort(Result[:,0],0),:]
     if Plot==True:
         plt.plot(Result[:,0],Result[:,1])
-        plt.show()
-    return Result
-
-#####################################################################################################
-
-
-
-#Model=Regression_Method_Evaluator([0,1,2,3,4,5],[1],GPR(normalize_y=True),Exp_File_Name='Exp_x25_z30_ComfortOnly.npy', plot=False,Return_Model=True)
-#Regression_Method_Evaluator([2],[5],LR(), plot=True,Duration_Limit=20)
-#Plot_Direction_Reward(Model,2.5,3)
-#optimize.brute(Target_Function,(slice(0,2*np.pi,2*np.pi/360),slice(0,420,10)))
-
-
-x=[5,10,15,20,25,30,35]
-
-z=[5,10,15,20,25,30,35,40,45,50,55]
-z=[5]
-for j in z:
-    for i in x:
-        filename='Exp_x'+str(i)+'_z'+str(j)+'_ComfortOnly.npy'
-        Model=Regression_Method_Evaluator([0,1,2,3],[4],GPR(normalize_y=True),Exp_File_Name=filename, plot=False,Return_Model=True)
-        print('x=',i/10,'z=',j/10)
-        a=RelativeAngle_DurationRequired(i/10,j/10,Model,Min_Comfort_Level=0.95,Plot=True)
-#    print(j)
-#    plt.show()
-#        plt.plot(a,Prediction_Test)
-#        plt.plot(a,Testing_Labels)
 #        plt.show()
+    return Result
+def Find_Max_Q(Next_State,Model):
+    Max_Q=-1000
+    Action=copy.deepcopy(Next_State)
+    for i in range(0,430,10):
+        Action[-1]=i
+        State_Action_Pair=np.concatenate((Next_State,Action)).reshape(1,-1)
+#        print(State_Action_Pair)
+        if Model.predict(State_Action_Pair)>Max_Q:
+            Max_Q=np.max([Max_Q,Model.predict(State_Action_Pair)])
+            Best_Duration=i
+        
+    return Max_Q,Best_Duration
+####################################################################################################################################################################   
+
+list1=np.random.choice(1008,size=50,replace=False)
+Model=Q_Function(list1,GPR(normalize_y=True),Exp_File_Name='Exp_x20_z10_ComfortOnly.npy', plot=False,Return_Model=True)
+rewards=copy.deepcopy(Training_Labels)
+Updated_Training_Labels=np.zeros(np.shape(rewards))
+a=0
+for k in range(1000):
+    count=0
+    for i in list1:
+        Next_State=Training_Data[count,0:4]
+        Updated_Training_Labels[count]=rewards[count]+.95*Find_Max_Q(Next_State,Model)[0]
+        count+=1
+    Model=Q_Function(list1,GPR(normalize_y=True),Updated_Training_Labels=Updated_Training_Labels,Exp_File_Name='Exp_x20_z10_ComfortOnly.npy', plot=False,Return_Model=True)
+    print(np.sum(Updated_Training_Labels)-a,k)
+    a=np.sum(Updated_Training_Labels)
+
+
+
+a=Updated_Training_Labels-Updated_Training_Labels[0]+rewards[0]
+
+plt.scatter(rewards,a)
+
+

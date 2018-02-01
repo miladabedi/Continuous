@@ -1,4 +1,4 @@
-import numpy as np
+ 6gimport numpy as np
 from scipy.optimize import minimize
 from scipy.spatial import distance
 import csv
@@ -208,7 +208,7 @@ def Data_Reader(action,X=3,Z=1):
     Folder_Name={d1:'uvwT(1)',d2:'uvwT(2)',d3:'uvwT(3)',d4:'uvwT(4)',d24:'uvwT(24)',d34:'uvwT(34)'}
     Direction=str(np.round(action[:3],5))
     Duration=str(int((action[3]*10+1800)))
-    path= "C:/Users/MiladAbedi/Anaconda3/Lib/site-packages/HVAC/Continuous/Data/"+Folder_Name[Direction]+"/"+Duration
+    path= "E:/Virginia Tech/Research/HVAC/4-Direction CFD/Data/"+Folder_Name[Direction]+"/"+Duration
     file=open(path,newline='')
     reader=csv.reader(file)
     header=next(reader)

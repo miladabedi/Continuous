@@ -15,8 +15,8 @@ a34=[-np.cos(np.pi/6)*np.cos(np.pi/4),-np.cos(np.pi/6)*np.cos(np.pi/4),np.cos(np
 a24=[np.cos(np.pi/6)*np.cos(np.pi/4),-np.cos(np.pi/6)*np.cos(np.pi/4),np.cos(np.pi/3),60]
 ##
 #
-Exp_x39_z3=Action_Value.Create_Batch_Experience(X=0.1,Z=4)
-np.save('Exp_x01_z40_ComfortOnly.npy',Exp_x39_z3)
+Exp_x39_z3=Action_Value.Create_Batch_Experience(X=2,Z=1)
+np.save('Exp_x20_z10_ComfortOnly.npy',Exp_x39_z3)
 #
 #Exp=np.load('Exp2.npy').tolist()
 #
@@ -94,8 +94,17 @@ Synth_Features=np.array([X,Y,0.5*np.ones(1000),0.725*np.ones(1000),X,Y,0.5*np.on
 #    Exp[i][3][3]=0
 #print(Exp[i][1][0:3])
 
+import os.path
 
+x=[5,10,15,20,25,30,35]
+z=[5,10,15,20,25,30,35,40,45,50,55]
 
-
+for i in x:
+    for j in z:
+        
+        filename='Exp_x'+str(i)+'_z'+str(j)+'_ComfortOnly.npy'
+        if not os.path.isfile(filename) :
+            Exp_x39_z3=Action_Value.Create_Batch_Experience(X=i/10,Z=j/10)
+            np.save(filename,Exp_x39_z3)
 
 #c=b.tolist()
